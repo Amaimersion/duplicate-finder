@@ -38,7 +38,7 @@ func main() {
 	defer tempFile.Close()
 	defer os.Remove(tempFile.Name())
 
-	err = walkFolder(cfg.folder1, func(filePath string) {
+	err = walkFolder(cfg.folder1, func(filePath, _ string) {
 		hash, err := fileToMD5(filePath)
 
 		if err != nil {
@@ -63,7 +63,7 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	err = walkFolder(cfg.folder2, func(filePath string) {
+	err = walkFolder(cfg.folder2, func(filePath, fileName string) {
 		hash, err := fileToMD5(filePath)
 
 		if err != nil {
@@ -81,19 +81,33 @@ func main() {
 		scanner := bufio.NewScanner(tempFile)
 
 		for scanner.Scan() {
-			info := info{}
+			original := info{}
 
-			if err = info.fromString(scanner.Text()); err != nil {
+			if err = original.fromString(scanner.Text()); err != nil {
 				logger.Println(err)
 				continue
 			}
 
-			if info.path == filePath {
+			if original.path == filePath {
 				continue
 			}
 
-			if info.hash == hash {
-				logger.Printf("duplicate - %v, original - %v", filePath, info.path)
+			if original.hash != hash {
+				continue
+			}
+
+			if len(cfg.move) > 0 {
+				if err := move(filePath, cfg.move, fileName); err == nil {
+					logger.Printf("moved: %v", fileName)
+				} else {
+					logger.Printf("unable to move %v: %v", fileName, err)
+				}
+			} else {
+				logger.Printf(
+					"duplicate - %v, original - %v",
+					filePath,
+					original.path,
+				)
 			}
 		}
 
@@ -111,6 +125,7 @@ func main() {
 type config struct {
 	folder1 string
 	folder2 string
+	move    string
 }
 
 func (c config) check() error {
@@ -140,13 +155,19 @@ func parseFlags() config {
 		"",
 		"Path to the folder № 2.",
 	)
+	flag.StringVar(
+		&cfg.move,
+		"move",
+		"",
+		"Move duplicates to this folder.",
+	)
 
 	flag.Parse()
 
 	return cfg
 }
 
-func walkFolder(path string, f func(filePath string)) error {
+func walkFolder(path string, f func(filePath, fileName string)) error {
 	fsys := os.DirFS(path)
 	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -160,7 +181,7 @@ func walkFolder(path string, f func(filePath string)) error {
 
 		fullPath := filepath.Join(path, p)
 
-		f(fullPath)
+		f(fullPath, p)
 
 		return nil
 	})
@@ -186,6 +207,21 @@ func fileToMD5(path string) (string, error) {
 	b16 := fmt.Sprintf("%x", h.Sum(nil))
 
 	return b16, nil
+}
+
+func move(path, to, name string) error {
+	newPath := filepath.Join(to, name)
+	dir := strings.TrimSuffix(newPath, filepath.Base(newPath))
+
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return err
+	}
+
+	if err := os.Rename(path, newPath); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type info struct {
