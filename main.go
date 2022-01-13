@@ -1,9 +1,11 @@
 package main
 
 import (
+	"crypto/md5"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -24,7 +26,14 @@ func main() {
 	}
 
 	err := walkFolder(cfg.folder1, func(filePath string) {
-		fmt.Println(filePath)
+		hash, err := fileToMD5(filePath)
+
+		if err != nil {
+			logger.Printf("unable to hash %v: %v", filePath, err)
+			return
+		}
+
+		logger.Printf("%v: %v", hash, filePath)
 	})
 
 	if err != nil {
@@ -86,4 +95,24 @@ func walkFolder(path string, f func(filePath string)) error {
 	})
 
 	return err
+}
+
+func fileToMD5(path string) (string, error) {
+	f, err := os.Open(path)
+
+	if err != nil {
+		return "", err
+	}
+
+	defer f.Close()
+
+	h := md5.New()
+
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	b16 := fmt.Sprintf("%x", h.Sum(nil))
+
+	return b16, nil
 }
