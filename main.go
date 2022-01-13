@@ -3,8 +3,11 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 var logger = log.New(
@@ -17,6 +20,14 @@ func main() {
 	cfg := parseFlags()
 
 	if err := cfg.check(); err != nil {
+		logger.Fatal(err)
+	}
+
+	err := walkFolder(cfg.folder1, func(filePath string) {
+		fmt.Println(filePath)
+	})
+
+	if err != nil {
 		logger.Fatal(err)
 	}
 }
@@ -53,4 +64,26 @@ func parseFlags() config {
 	flag.Parse()
 
 	return cfg
+}
+
+func walkFolder(path string, f func(filePath string)) error {
+	fsys := os.DirFS(path)
+	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			logger.Printf("%v will be skipped: %v", path, err)
+			return fs.SkipDir
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		fullPath := filepath.Join(path, p)
+
+		f(fullPath)
+
+		return nil
+	})
+
+	return err
 }
