@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/md5"
 	"errors"
 	"flag"
@@ -54,6 +55,50 @@ func main() {
 
 		if err != nil {
 			logger.Printf("unable to write info %v: %v", filePath, err)
+			return
+		}
+	})
+
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	err = walkFolder(cfg.folder2, func(filePath string) {
+		hash, err := fileToMD5(filePath)
+
+		if err != nil {
+			logger.Printf("unable to hash %v: %v", filePath, err)
+			return
+		}
+
+		_, err = tempFile.Seek(0, 0)
+
+		if err != nil {
+			logger.Printf("unable to seek: %v", err)
+			return
+		}
+
+		scanner := bufio.NewScanner(tempFile)
+
+		for scanner.Scan() {
+			info := info{}
+
+			if err = info.fromString(scanner.Text()); err != nil {
+				logger.Println(err)
+				continue
+			}
+
+			if info.path == filePath {
+				continue
+			}
+
+			if info.hash == hash {
+				logger.Printf("duplicate - %v, original - %v", filePath, info.path)
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			logger.Printf("unable to scan: %v", err)
 			return
 		}
 	})
