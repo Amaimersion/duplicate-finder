@@ -149,14 +149,14 @@ func (i info) string() string {
 }
 
 func (i *info) fromString(s string) error {
-	parts := strings.Split(s, " ")
+	parts := strings.SplitN(s, " ", 2)
 
 	if len(parts) != 2 {
 		return errors.New("invalid info string")
 	}
 
-	i.path = parts[1]
 	i.hash = parts[0]
+	i.path = parts[1]
 
 	return nil
 }
