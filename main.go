@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var logger = log.New(
@@ -25,7 +26,18 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	err := walkFolder(cfg.folder1, func(filePath string) {
+	// We will store data in file, not in memory, because
+	// amount of data can be very large.
+	tempFile, err := os.CreateTemp("", "duplicate-finder-")
+
+	if err != nil {
+		logger.Fatalf("unable to create temp file: %v", err)
+	}
+
+	defer tempFile.Close()
+	defer os.Remove(tempFile.Name())
+
+	err = walkFolder(cfg.folder1, func(filePath string) {
 		hash, err := fileToMD5(filePath)
 
 		if err != nil {
@@ -33,7 +45,17 @@ func main() {
 			return
 		}
 
-		logger.Printf("%v: %v", hash, filePath)
+		i := info{
+			path: filePath,
+			hash: hash,
+		}
+		s := i.string() + "\n"
+		_, err = tempFile.Write([]byte(s))
+
+		if err != nil {
+			logger.Printf("unable to write info %v: %v", filePath, err)
+			return
+		}
 	})
 
 	if err != nil {
@@ -115,4 +137,26 @@ func fileToMD5(path string) (string, error) {
 	b16 := fmt.Sprintf("%x", h.Sum(nil))
 
 	return b16, nil
+}
+
+type info struct {
+	path string
+	hash string
+}
+
+func (i info) string() string {
+	return fmt.Sprintf("%v %v", i.hash, i.path)
+}
+
+func (i *info) fromString(s string) error {
+	parts := strings.Split(s, " ")
+
+	if len(parts) != 2 {
+		return errors.New("invalid info string")
+	}
+
+	i.path = parts[1]
+	i.hash = parts[0]
+
+	return nil
 }
