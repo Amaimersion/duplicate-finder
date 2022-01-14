@@ -48,7 +48,7 @@ func main() {
 			name: fileName,
 			hash: hash,
 		}
-		s := i.string() + "\n"
+		s := i.decode() + "\n"
 		_, err = tempFile.Write([]byte(s))
 
 		if err != nil {
@@ -82,7 +82,7 @@ func main() {
 			t := scanner.Text()
 			original := info{}
 
-			if err := original.fromString(t); err != nil {
+			if err := original.encode(t); err != nil {
 				logger.Println(err)
 				continue
 			}
@@ -229,9 +229,9 @@ type info struct {
 	name string
 }
 
-func (i info) string() string {
+func (i info) decode() string {
 	// We will use Base64 in order to guarantee that there will be
-	// only N spaces because we will use it in fromString().
+	// only N spaces because we will use it in encode().
 	return fmt.Sprintf(
 		"%v %v %v",
 		i.hash,
@@ -240,7 +240,7 @@ func (i info) string() string {
 	)
 }
 
-func (i *info) fromString(s string) error {
+func (i *info) encode(s string) error {
 	n := 3
 	parts := strings.SplitN(s, " ", n)
 
