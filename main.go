@@ -77,6 +77,11 @@ func main() {
 		}
 
 		scanner := bufio.NewScanner(tempFile)
+		candidate := info{
+			hash: hash,
+			path: filePath,
+			name: fileName,
+		}
 
 		for scanner.Scan() {
 			t := scanner.Text()
@@ -87,26 +92,22 @@ func main() {
 				continue
 			}
 
-			if original.path == filePath {
+			if original.path == candidate.path {
 				continue
 			}
 
-			if original.hash != hash {
+			if original.hash != candidate.hash {
 				continue
 			}
 
 			if len(cfg.move) > 0 {
-				if err := move(filePath, cfg.move, fileName); err == nil {
-					logger.Printf("moved: %v", fileName)
+				if err := move(candidate.path, cfg.move, candidate.name); err == nil {
+					logger.Printf("moved: %v", candidate.name)
 				} else {
-					logger.Printf("unable to move %v: %v", fileName, err)
+					logger.Printf("unable to move %v: %v", candidate.name, err)
 				}
 			} else {
-				logger.Printf(
-					"duplicate - %v, original - %v",
-					filePath,
-					original.path,
-				)
+				print(original, candidate)
 			}
 		}
 
@@ -206,6 +207,14 @@ func fileToMD5(path string) (string, error) {
 	b16 := fmt.Sprintf("%x", h.Sum(nil))
 
 	return b16, nil
+}
+
+func print(original, duplicate info) {
+	logger.Printf(
+		"%v (f2) is duplicate of %v (f1)",
+		duplicate.name,
+		original.name,
+	)
 }
 
 func move(path, to, name string) error {
