@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"crypto/md5"
+	"encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
@@ -34,7 +35,7 @@ func main() {
 	defer tempFile.Close()
 	defer os.Remove(tempFile.Name())
 
-	err = walkFolder(cfg.folder1, func(filePath, _ string) {
+	err = walkFolder(cfg.folder1, func(filePath, fileName string) {
 		hash, err := fileToMD5(filePath)
 
 		if err != nil {
@@ -44,6 +45,7 @@ func main() {
 
 		i := info{
 			path: filePath,
+			name: fileName,
 			hash: hash,
 		}
 		s := i.string() + "\n"
@@ -224,21 +226,57 @@ func move(path, to, name string) error {
 type info struct {
 	path string
 	hash string
+	name string
 }
 
 func (i info) string() string {
-	return fmt.Sprintf("%v %v", i.hash, i.path)
+	// We will use Base64 in order to guarantee that there will be
+	// only N spaces because we will use it in fromString().
+	return fmt.Sprintf(
+		"%v %v %v",
+		i.hash,
+		toBase64(i.path),
+		toBase64(i.name),
+	)
 }
 
 func (i *info) fromString(s string) error {
-	parts := strings.SplitN(s, " ", 2)
+	n := 3
+	parts := strings.SplitN(s, " ", n)
 
-	if len(parts) != 2 {
+	if len(parts) != n {
 		return errors.New("invalid info string")
 	}
 
+	path, err := fromBase64(parts[1])
+
+	if err != nil {
+		return err
+	}
+
+	name, err := fromBase64(parts[2])
+
+	if err != nil {
+		return err
+	}
+
 	i.hash = parts[0]
-	i.path = parts[1]
+	i.path = path
+	i.name = name
 
 	return nil
+}
+
+func toBase64(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+func fromBase64(s string) (string, error) {
+	b, err := base64.StdEncoding.DecodeString(s)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), err
 }
