@@ -77,9 +77,10 @@ func main() {
 		scanner := bufio.NewScanner(tempFile)
 
 		for scanner.Scan() {
+			t := scanner.Text()
 			original := info{}
 
-			if err = original.fromString(scanner.Text()); err != nil {
+			if err := original.fromString(t); err != nil {
 				logger.Println(err)
 				continue
 			}
