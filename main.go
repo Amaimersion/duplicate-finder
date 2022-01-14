@@ -14,11 +14,7 @@ import (
 	"strings"
 )
 
-var logger = log.New(
-	os.Stdout,
-	"",
-	0,
-)
+var logger = log.New(os.Stdout, "", 0)
 
 func main() {
 	cfg := parseFlags()
