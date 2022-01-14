@@ -169,9 +169,9 @@ func parseFlags() config {
 
 func walkFolder(path string, f func(filePath, fileName string)) error {
 	fsys := os.DirFS(path)
-	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsys, ".", func(name string, d fs.DirEntry, err error) error {
 		if err != nil {
-			logger.Printf("%v will be skipped: %v", path, err)
+			logger.Printf("%v will be skipped: %v", name, err)
 			return fs.SkipDir
 		}
 
@@ -179,9 +179,9 @@ func walkFolder(path string, f func(filePath, fileName string)) error {
 			return nil
 		}
 
-		fullPath := filepath.Join(path, p)
+		fullPath := filepath.Join(path, name)
 
-		f(fullPath, p)
+		f(fullPath, name)
 
 		return nil
 	})
