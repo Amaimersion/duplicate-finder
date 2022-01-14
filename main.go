@@ -134,7 +134,7 @@ func (c config) check() error {
 	}
 
 	if c.folder1 == c.folder2 {
-		return errors.New("same folder not supported, instead copy f1 in new folder")
+		return errors.New("same folder not supported, instead copy f1 to new folder")
 	}
 
 	return nil
