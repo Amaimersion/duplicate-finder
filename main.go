@@ -100,14 +100,14 @@ func main() {
 				continue
 			}
 
+			print(original, candidate)
+
 			if len(cfg.move) > 0 {
 				if err := move(candidate.path, cfg.move, candidate.name); err == nil {
 					logger.Printf("moved: %v", candidate.name)
 				} else {
 					logger.Printf("unable to move %v: %v", candidate.name, err)
 				}
-			} else {
-				print(original, candidate)
 			}
 		}
 
