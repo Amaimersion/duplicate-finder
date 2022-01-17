@@ -147,13 +147,13 @@ func parseFlags() config {
 		&cfg.folder1,
 		"f1",
 		"",
-		"Path to the folder № 1.",
+		"Path to the folder № 1. Implied as original.",
 	)
 	flag.StringVar(
 		&cfg.folder2,
 		"f2",
 		"",
-		"Path to the folder № 2.",
+		"Path to the folder № 2. Implied as potential duplicate.",
 	)
 	flag.StringVar(
 		&cfg.move,
