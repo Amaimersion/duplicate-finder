@@ -1,3 +1,4 @@
 duplicate-finder
 *.exe
 *.zip
+.vscode
