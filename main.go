@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -23,6 +24,16 @@ func main() {
 	if err := cfg.check(); err != nil {
 		logger.Fatal(err)
 	}
+
+	logFile, closeLogFile, err := openLogFile(cfg.output)
+
+	if err != nil {
+		logger.Fatalf("unable to open log file: %v", err)
+	}
+
+	defer closeLogFile()
+
+	logger.SetOutput(logFile)
 
 	// We will store data in file, not in memory, because
 	// amount of data can be very large.
@@ -142,6 +153,7 @@ func main() {
 }
 
 type config struct {
+	output  string
 	folder1 string
 	folder2 string
 	move    string
@@ -158,6 +170,12 @@ func (c config) check() error {
 func parseFlags() config {
 	cfg := config{}
 
+	flag.StringVar(
+		&cfg.output,
+		"output",
+		"/dev/stdout",
+		"Output logs to this file. Use /dev/null to disable.",
+	)
 	flag.StringVar(
 		&cfg.folder1,
 		"f1",
@@ -180,6 +198,36 @@ func parseFlags() config {
 	flag.Parse()
 
 	return cfg
+}
+
+func openLogFile(name string) (io.Writer, func(), error) {
+	closeVoid := func() {}
+
+	switch name {
+	case "/dev/stdout":
+		return os.Stdout, closeVoid, nil
+	case "/dev/stderr":
+		return os.Stderr, closeVoid, nil
+	case "/dev/null":
+	case "/dev/zero":
+		return ioutil.Discard, closeVoid, nil
+	}
+
+	file, err := os.OpenFile(
+		name,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		os.ModePerm,
+	)
+
+	if err != nil {
+		return nil, closeVoid, err
+	}
+
+	closeFile := func() {
+		file.Close()
+	}
+
+	return file, closeFile, nil
 }
 
 func walkFolder(path string, f func(filePath, fileName string)) error {
