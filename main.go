@@ -61,6 +61,12 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	// In case of same folder we shouldn't handle items that was already
+	// marked as duplicates, otherwise we will end up with entire folder
+	// marked as duplicate.
+	duplicates := make(map[string]struct{})
+	sameFolder := (cfg.folder1 == cfg.folder2)
+
 	err = walkFolder(cfg.folder2, func(filePath, fileName string) {
 		hash, err := fileToMD5(filePath)
 
@@ -100,6 +106,12 @@ func main() {
 				continue
 			}
 
+			if sameFolder {
+				if _, ok := duplicates[original.path]; ok {
+					continue
+				}
+			}
+
 			print(original, candidate)
 
 			if len(cfg.move) > 0 {
@@ -108,6 +120,13 @@ func main() {
 				} else {
 					logger.Printf("unable to move: %v", err)
 				}
+			}
+
+			if sameFolder {
+				duplicates[candidate.path] = struct{}{}
+
+				// We shouldn't handle (print, move, etc) more than once one item.
+				break
 			}
 		}
 
@@ -131,10 +150,6 @@ type config struct {
 func (c config) check() error {
 	if len(c.folder1) == 0 || len(c.folder2) == 0 {
 		return errors.New("f1 and f2 must be specified")
-	}
-
-	if c.folder1 == c.folder2 {
-		return errors.New("same folder not supported, instead copy f1 to new folder")
 	}
 
 	return nil
